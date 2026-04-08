@@ -1,0 +1,47 @@
+﻿@model MangementSystem.Models.Employee
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Delete Employee</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Kya aap sure hain ke aap ye employee delete karna chahte hain?</p>
+
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Name</th>
+                            <td>@Model.Name</td>
+                        </tr>
+                        <tr>
+                            <th>Department</th>
+                            <td>@Model.Department</td>
+                        </tr>
+                        <tr>
+                            <th>Email</th>
+                            <td>@Model.Email</td>
+                        </tr>
+                        <tr>
+                            <th>Salary</th>
+                            <td>₹@Model.Salary.ToString("N0")</td>
+                        </tr>
+                    </table>
+
+                    <form asp-action="Delete" method="post">
+                        <input type="hidden" asp-for="Id" />
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-danger w-100">
+                                Haan, Delete Karo
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary w-100">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

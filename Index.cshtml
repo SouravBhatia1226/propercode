@@ -1,0 +1,197 @@
+﻿@model IEnumerable<Employee>
+
+@{
+    ViewData["Title"] = "Employees";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="bi bi-people-fill me-2 text-primary"></i>Employees</h2>
+    @if (User.IsInRole("Admin"))
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Add Employee
+        </a>
+    }
+</div>
+
+<!-- Search Bar -->
+<div class="mb-3">
+    <input type="text" id="searchInput" class="form-control"
+           placeholder="🔍 Name, Department ya Email se search karein...">
+</div>
+
+<!-- Table -->
+<div class="table-responsive">
+    <table class="table table-hover align-middle" id="employeeTable">
+        <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Email</th>
+                <th>Salary</th>
+                @if (User.IsInRole("Admin"))
+                {
+                    <th class="text-center">Actions</th>
+                }
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            @foreach (var e in Model)
+            {
+                <tr>
+                    <td>@e.Id</td>
+                    <td>@e.Name</td>
+                    <td><span class="badge bg-secondary">@e.Department</span></td>
+                    <td>@e.Email</td>
+                    <td>₹@e.Salary.ToString("N0")</td>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <td class="text-center">
+                            <a asp-action="Details" asp-route-id="@e.Id"
+                               class="btn btn-sm btn-outline-info me-1" title="Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@e.Id"
+                               class="btn btn-sm btn-outline-warning me-1" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a asp-action="Delete" asp-route-id="@e.Id"
+                               class="btn btn-sm btn-outline-danger" title="Delete"
+                               onclick="return confirm('Kya aap @e.Name ko delete karna chahte hain?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- No results message -->
+<div id="noResults" class="text-center text-muted py-4 d-none">
+    <i class="bi bi-inbox fs-1"></i>
+    <p class="mt-2">Koi employee nahi mila.</p>
+</div>
+
+<!-- Pagination Controls -->
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <small class="text-muted" id="pageInfo"></small>
+    <nav>
+        <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+    </nav>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            const rowsPerPage = 5;
+            let currentPage = 1;
+            let filteredRows = [];
+
+            function getRows() {
+                return $('#tableBody tr').toArray();
+            }
+
+            function filterRows(query) {
+                const q = query.toLowerCase().trim();
+                filteredRows = getRows().filter(row => {
+                    if (!q) return true;
+                    return $(row).text().toLowerCase().includes(q);
+                });
+            }
+
+            function renderPage() {
+                const allRows = getRows();
+
+                // Pehle sab hide karo
+                allRows.forEach(r => $(r).hide());
+
+                if (filteredRows.length === 0) {
+                    $('#noResults').removeClass('d-none');
+                    $('#pagination').empty();
+                    $('#pageInfo').text('');
+                    return;
+                }
+
+                $('#noResults').addClass('d-none');
+
+                const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+                currentPage = Math.min(currentPage, totalPages);
+
+                const start = (currentPage - 1) * rowsPerPage;
+                const end = start + rowsPerPage;
+
+                filteredRows.slice(start, end).forEach(r => $(r).show());
+
+                // Page info
+                $('#pageInfo').text(
+                    `Showing ${start + 1}–${Math.min(end, filteredRows.length)} of ${filteredRows.length} employees`
+                );
+
+                // Pagination buttons
+                const $pag = $('#pagination').empty();
+
+                // Prev
+                $pag.append(`
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${currentPage - 1}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>`);
+
+                for (let i = 1; i <= totalPages; i++) {
+                    $pag.append(`
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" data-page="${i}">${i}</a>
+                        </li>`);
+                }
+
+                // Next
+                $pag.append(`
+                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${currentPage + 1}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>`);
+            }
+
+            function init(query = '') {
+                filterRows(query);
+                renderPage();
+            }
+
+            // Search — debounce ke saath (300ms)
+            let searchTimer;
+            $('#searchInput').on('input', function () {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    currentPage = 1;
+                    init($(this).val());
+                }, 300);
+            });
+
+            // Pagination click
+            $(document).on('click', '#pagination .page-link', function (e) {
+                e.preventDefault();
+                const page = parseInt($(this).data('page'));
+                if (!isNaN(page) && page >= 1) {
+                    currentPage = page;
+                    renderPage();
+                }
+            });
+
+            // Initial load
+            init();
+        });
+    </script>
+}
